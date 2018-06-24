@@ -1,9 +1,20 @@
 const fetch = require('node-fetch')
 const cheerio = require('cheerio')
+
 const searchURL = 'https://www.imdb.com/find?s=tt&ttype=ft&ref_=fn_ft&q='
 const movieURL = 'https://www.imdb.com/title/' 
 
+const searchCache = {}
+const movieCache = {}
+
+
 function searchMovies(searchTerm){
+  if(searchCache[searchTerm]){
+    console.log('Serving from cache');
+    
+    return Promise.resolve(searchCache[searchTerm])
+  }
+
  return  fetch(`${searchURL}${searchTerm}`)
     .then(response => response.text())
     .then(body => {
@@ -21,11 +32,16 @@ function searchMovies(searchTerm){
         }
         movies.push(movie)
       })
+      searchCache[searchTerm] = movies;
       return movies
     })
 }
 
 function getMovie(imdbID){
+  if(movieCache[imdbID]){
+    console.log('Serving from cache');
+    return Promise.resolve(movieCache[imdbID])
+  }
   return  fetch(`${movieURL}${imdbID}`)
     .then(response => response.text())
     .then(body => {
@@ -48,7 +64,7 @@ function getMovie(imdbID){
       const poster = $('div.poster a img').attr('src');
       const summary = $('span[itemprop="description"]').text().trim()
       const director = $('span[itemprop="director"]').text().trim()
-      return {
+      const movie = {
         imdbID,
         title,
         duration,
@@ -58,7 +74,9 @@ function getMovie(imdbID){
         summary,
         director
       }
-      
+
+      movieCache[imdbID] = movie;
+      return movie;
     })
 }
 
